@@ -78,3 +78,52 @@ WorkspaceSchema.pre("save", async function () {
 WorkspaceSchema.index({"members.user":1});
 
 export const Workspace = mongoose.model<IWorkspace>("Workspace", WorkspaceSchema);
+
+// task model 
+
+export enum TaskStatus {
+  TODO = "todo",
+  IN_PROGRESS = "in_progress",
+  DONE = "done",
+}
+
+export enum TaskPriority {
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+}
+
+export interface ITask extends Document {
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  workspace: mongoose.Types.ObjectId;
+  assignee: mongoose.Types.ObjectId;
+  createdBy: mongoose.Types.ObjectId;
+  dueDate?: Date;
+}
+
+const TaskSchema = new Schema<ITask>(
+  {
+    title: { type: String, required: [true, "Task title is required"], trim: true },
+    description: { type: String, trim: true },
+    status: { 
+      type: String, 
+      enum: Object.values(TaskStatus), 
+      default: TaskStatus.TODO 
+    },
+    priority: { 
+      type: String, 
+      enum: Object.values(TaskPriority), 
+      default: TaskPriority.MEDIUM 
+    },
+    workspace: { type: Schema.Types.ObjectId, ref: "Workspace", required: true },
+    assignee: { type: Schema.Types.ObjectId, ref: "signup", required: true },
+    createdBy: { type: Schema.Types.ObjectId, ref: "signup", required: true },
+    dueDate: { type: Date },
+  },
+  { timestamps: true }
+);
+
+export const Task = mongoose.model<ITask>("Task", TaskSchema);

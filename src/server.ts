@@ -13,6 +13,7 @@ import googleRouter from "./Routers/gooGleAuthRouter";
 import TaskRouter from "./Routers/taskRouter";
 import passport from 'passport';
 import { setupSocketHandlers } from "./services/socketService";
+import WorkspaceRouter from "./Routers/workspaceRouter";
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
 
@@ -43,6 +44,7 @@ app.use(passport.initialize());
 app.use("/api/v1/auth", signupRoute);
 app.use('/api/v1/auth', googleRouter);
 app.use("/api/v1/tasks", TaskRouter);
+app.use("/api/v1/workspace", WorkspaceRouter);
 app.use('/uploads', express.static('public/uploads'));
 
 // Error Handlers
