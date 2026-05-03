@@ -1,57 +1,83 @@
-import { Schema, model, Document, Types } from "mongoose";
-import { ITask, TaskStatus, TaskPriority } from "../Types/Task.Type"
+import mongoose, { Schema, Document, Types } from "mongoose";
 
-export interface ITaskDocument extends Omit<ITask, "_id">, Document {
+// Enums for strict values
+export enum TaskStatus {
+  TODO = "todo",
+  IN_PROGRESS = "in_progress",
+  DONE = "done",
+}
+
+export enum TaskPriority {
+  LOW = "low",
+  MEDIUM = "medium",
+  HIGH = "high",
+}
+
+export interface ITask extends Document {
+  title: string;
+  description?: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  dueDate?: Date;
+ 
+  createdBy: Types.ObjectId; 
+  assignee: Types.ObjectId;  
   workspace?: Types.ObjectId; 
 }
 
-const taskSchema = new Schema<ITaskDocument>(
+const TaskSchema = new Schema<ITask>(
   {
-    title: {
-      type: String,
-      required: [true, "Task title is required"],
+    title: { 
+      type: String, 
+      required: [true, "Task title is required"], 
       trim: true,
-      maxlength: [100, "Title cannot be more than 100 characters"],
+      maxlength: [100, "Title cannot exceed 100 characters"]
     },
-    description: {
-      type: String,
+    description: { 
+      type: String, 
       trim: true,
-      maxlength: [500, "Description cannot be more than 500 characters"],
+      maxlength: [500, "Description cannot exceed 500 characters"]
     },
-    status: {
-      type: String,
-      enum: Object.values(TaskStatus),
-      default: TaskStatus.TODO,
+    status: { 
+      type: String, 
+      enum: ["todo", "in_progress", "completed", "done"],
+      default: TaskStatus.TODO 
     },
-    priority: {
-      type: String,
-      enum: Object.values(TaskPriority),
-      default: TaskPriority.MEDIUM,
+    priority: { 
+      type: String, 
+      enum: Object.values(TaskPriority), 
+      default: TaskPriority.MEDIUM 
     },
-    dueDate: {
-      type: Date,
+    dueDate: { 
+      type: Date 
     },
-    user: {
-      type: Schema.Types.ObjectId,
+ 
+    createdBy: { 
+      type: Schema.Types.ObjectId, 
+      ref: "SaasUser",
+      required: [true, "Creator ID is required"] 
+    },
+ 
+    assignee: { 
+      type: Schema.Types.ObjectId, 
       ref: "SaasUser", 
-      required: [true, "Task must belong to a user"],
+      required: [true, "Assignee is required"] 
     },
    
-    workspace: {
-      type: Schema.Types.ObjectId,
-      ref: "Workspace",
-      required: false, 
+    workspace: { 
+      type: Schema.Types.ObjectId, 
+      ref: "Workspace", 
+      required: false 
     },
   },
-  {
+  { 
     timestamps: true,
     toJSON: { virtuals: true },
-    toObject: { virtuals: true },
+    toObject: { virtuals: true }
   }
 );
 
-taskSchema.index({ user: 1, workspace: 1, status: 1 });
 
-const Task = model<ITaskDocument>("Task", taskSchema);
+TaskSchema.index({ createdBy: 1, workspace: 1, status: 1 });
 
-export default Task;
+export const Task = mongoose.models.Task || mongoose.model<ITask>("Task", TaskSchema);

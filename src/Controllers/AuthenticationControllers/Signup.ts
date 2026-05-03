@@ -1,10 +1,11 @@
 import { Request, Response } from "express";
 import { signup } from "../../Models/signupSchema";
-import { Resend } from "resend";
+import nodemailer from "nodemailer"; 
 import { z } from "zod";
 import asyncHandler from "express-async-handler";
 import crypto from 'crypto'
 import bcrypt from 'bcrypt'
+
 const signupSchema = z.object({
   name: z.string().min(3, "Name is too short"),
   email: z.string().email("Invalid email format"),
@@ -17,40 +18,54 @@ const signupSchema = z.object({
     .regex(/[^A-Za-z0-9]/, "Password must contain at least one special character"),
 });
 
-const resend = new Resend(process.env.RESEND_API);
 export const SignupController = asyncHandler(async (req: Request, res: Response) => {
   const validatedData = signupSchema.parse(req.body);
   const { name, email, password } = validatedData;
+
   const duplicateUser = await signup.findOne({ email }).select("_id");
   if (duplicateUser) {
     res.status(400);
-    throw new Error("User already exists with this email");
+    throw new Error("User already exists");
   }
-  const verificationCode = crypto.randomInt(100000, 999999).toString()
-  const hashVerificationCode = await bcrypt.hash(verificationCode, 10)
-  const expiryTime = new Date(Date.now() + 15 * 60 * 1000);
+
+  const verificationCode = crypto.randomInt(100000, 999999).toString();
+  const hashVerificationCode = await bcrypt.hash(verificationCode, 10);
+  
   const newUser = await signup.create({
     name,
     email,
     password,
     verificationCode: hashVerificationCode,
     verified: false,
-    verificationCodeExpires: expiryTime,
+    verificationCodeExpires: new Date(Date.now() + 15 * 60 * 1000),
   });
-  const { data, error } = await resend.emails.send({
-    from: "Acme <onboarding@resend.dev>",
-    to: [email],
-    subject: "Verify Your Account",
-    html: `<strong>Your code: ${verificationCode}</strong>. Expires in 15 minutes.`,
-  });
-  if (error) {
 
+  const transporter = nodemailer.createTransport({
+    host: "sandbox.smtp.mailtrap.io",
+    port: 2525,
+    auth: {
+      user: process.env.MAILTRAP_USER,
+      pass: process.env.MAILTRAP_PASS
+    }
+  });
+
+  try {
+   
+    await transporter.sendMail({
+      from: '"Test App" <hello@demomailtrap.com>', 
+      to: email,
+      subject: "Verify Your Account",
+      html: `<strong>Your code: ${verificationCode}</strong>`,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Verification code sent to Mailtrap inbox.",
+    });
+
+  } catch (error: any) {
     await signup.findByIdAndDelete(newUser._id);
     res.status(500);
-    throw new Error(`Email failed: ${error.message}`);
+    throw new Error(`SMTP Error: ${error.message}`);
   }
-  res.status(201).json({
-    success: true,
-    message: "Verification code sent to your email.",
-  });
 });

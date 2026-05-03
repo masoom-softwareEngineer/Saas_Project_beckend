@@ -1,7 +1,8 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
-import Task from "../Models/taskModel";
+import { Task } from "../Models/taskModel";
 import { TaskStatus, TaskPriority } from "../Types/Task.Type";
+import { after } from "node:test";
 
 /**
  * @desc    Create a new task
@@ -9,8 +10,8 @@ import { TaskStatus, TaskPriority } from "../Types/Task.Type";
  * @access  Private (Authenticated users only)
  */
 export const createTask = asyncHandler(async (req: Request, res: Response) => {
-  
   const { title, description, status, priority, dueDate } = req.body;
+  const userId = (req.user as any)._id;
 
   const task = await Task.create({
     title,
@@ -18,14 +19,12 @@ export const createTask = asyncHandler(async (req: Request, res: Response) => {
     status: status || TaskStatus.TODO,
     priority: priority || TaskPriority.MEDIUM,
     dueDate,
-    user: (req.user as any )?._id, 
+    user: userId, 
+    createdBy: userId, 
+    assignee: userId,  
   });
 
-  res.status(201).json({
-    success: true,
-    message: "Task created successfully",
-    data: task,
-  });
+  res.status(201).json({ success: true, message: "Task created successfully", data: task });
 });
 
 
@@ -41,7 +40,13 @@ export const getAllTasks = asyncHandler(async (req: Request, res: Response) => {
   const limit = parseInt(req.query.limit as string) || 10;
   const skip = (page - 1) * limit;
 
-  const queryObj: any = { user: userId };
+  const queryObj: any = { 
+    $or: [
+      {user: userId},
+      {createdBy: userId},
+      {assignee: userId}
+    ]
+  };
   
   if (req.query.status) queryObj.status = req.query.status;
   if (req.query.priority) queryObj.priority = req.query.priority;
@@ -72,6 +77,7 @@ export const getAllTasks = asyncHandler(async (req: Request, res: Response) => {
     data: tasks,
   });
 });
+ 
 
 
 /**
@@ -89,14 +95,14 @@ export const updateTask = asyncHandler(async (req: Request, res: Response) => {
     res.status(404);
     throw new Error("Task not found");
   }
-
-  if (task.user.toString() !== userId.toString()) {
+const taskOwnerId = task.user?.toString() || task.createdBy?.toString()
+  if (!taskOwnerId  || taskOwnerId !== userId.toString()) {
     res.status(401);
     throw new Error("User not authorized to update this task");
   }
 
   task = await Task.findByIdAndUpdate(id, req.body, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   });
 
@@ -122,8 +128,8 @@ export const deleteTask = asyncHandler(async (req: Request, res: Response) => {
     res.status(404);
     throw new Error("Task not found");
   }
-
-  if (task.user.toString() !== userId.toString()) {
+  const taskOwnerId = task.user?.toString() || task.createdBy?.toString()
+  if (!taskOwnerId  || taskOwnerId !== userId.toString()) {
     res.status(401);
     throw new Error("User not authorized to delete this task");
   }

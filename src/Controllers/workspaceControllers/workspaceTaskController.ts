@@ -1,5 +1,6 @@
 import { asyncHandler } from "../../MiddleWare/asyncHandler";
-import { Task, Workspace } from "../../Models/workSpace";
+import { Task } from "../../Models/taskModel";
+import { Workspace } from "../../Models/workSpace";
 import { GroupSchema } from "../Validations/task.validation";
 import { Request, Response } from "express";
 
@@ -11,7 +12,6 @@ export const createGroupTask = asyncHandler(async (req: Request, res: Response) 
   const validatedData = GroupSchema.parse(req.body);
   const creatorId = (req.user as any)._id;
 
- 
   const isMember = await Workspace.exists({
     _id: validatedData.workspaceId,
     "members.user": creatorId,
@@ -22,15 +22,19 @@ export const createGroupTask = asyncHandler(async (req: Request, res: Response) 
     throw new Error("Access Denied: You are not a member of this workspace");
   }
 
-  // 3. Task Creation
+  
   const newTask = await Task.create({
-    ...validatedData,
+    title: validatedData.title,
+    description: validatedData.description,
+    priority: validatedData.priority,
+    dueDate: validatedData.dueDate,
     workspace: validatedData.workspaceId,
-    assignee: validatedData.assigneeId,
-    createdBy: creatorId,
+    assignee: validatedData.assigneeId, 
+    createdBy: creatorId,               
+    user: creatorId,                    
   });
 
-  
+ 
   const result = await Task.findById(newTask._id)
     .populate("assignee", "name email avatar")
     .populate("createdBy", "name email avatar")
