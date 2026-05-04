@@ -1,11 +1,12 @@
 import { asyncHandler } from "../../MiddleWare/asyncHandler";
 import { Task } from "../../Models/taskModel";
 import { Workspace } from "../../Models/workSpace";
+import { emitToWorkspace } from "../../services/socketService";
 import { GroupSchema } from "../Validations/task.validation";
 import { Request, Response } from "express";
 
 /**
- * @desc    Create a new task with strict validation
+ * @desc    Create a new task with strict validation and socket Emit
  * @access  Private
  */
 export const createGroupTask = asyncHandler(async (req: Request, res: Response) => {
@@ -34,19 +35,17 @@ export const createGroupTask = asyncHandler(async (req: Request, res: Response) 
     user: creatorId,                    
   });
 
- 
   const result = await Task.findById(newTask._id)
-    .populate("assignee", "name email avatar")
-    .populate("createdBy", "name email avatar")
-    .lean(); 
+  .populate("assignee", "name email avatar")
+  .populate("createdBy", "name email avatar")
+  .lean();
 
- 
-res.status(201).json({
-  success: true,
-  message: "Task created successfully",
-  data: result, 
+const io = req.app.get("io");
+emitToWorkspace(io, validatedData.workspaceId, "TASK_CREATED", result);
+
+  res.status(201).json({ success: true, data: result });
 });
-});
+
 
 /**
  * @desc    Advanced Get Tasks with Filtering, Sorting, and Pagination
@@ -127,10 +126,11 @@ export const deleteGroupTask = asyncHandler(async (req: Request, res: Response) 
 
   await task.deleteOne();
 
-  res.status(200).json({
-    success: true,
-    message: "Task deleted successfully by authorized user",
-  });
+  const workspaceObj = task.workspace as any; 
+  const io = req.app.get("io");
+  emitToWorkspace(io, workspaceObj._id.toString(), "TASK_DELETED", { taskId });
+
+  res.status(200).json({ success: true, message: "Deleted" });
 });
 
 
@@ -183,9 +183,8 @@ export const updateGroupTask = asyncHandler(async (req: Request, res: Response) 
     { new: true, runValidators: true }
   ).populate("assignee", "name avatar");
 
-  res.status(200).json({
-    success: true,
-    message: "Task updated successfully",
-    data: updatedTask,
-  });
+  const io = req.app.get("io");
+  emitToWorkspace(io, task.workspace._id.toString(), "TASK_UPDATED", updatedTask);
+
+  res.status(200).json({ success: true, data: updatedTask });
 });
