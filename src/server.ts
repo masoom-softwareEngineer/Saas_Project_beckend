@@ -26,6 +26,7 @@ const io = new Server(httpServer, {
         credentials: true
     }
 });
+app.set("io", io);
 
 // 3. Middlewares
 app.use(cookieParser());

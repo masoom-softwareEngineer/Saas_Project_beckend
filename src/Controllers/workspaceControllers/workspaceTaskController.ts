@@ -23,7 +23,6 @@ export const createGroupTask = asyncHandler(async (req: Request, res: Response) 
     throw new Error("Access Denied: You are not a member of this workspace");
   }
 
-  
   const newTask = await Task.create({
     title: validatedData.title,
     description: validatedData.description,
@@ -36,14 +35,22 @@ export const createGroupTask = asyncHandler(async (req: Request, res: Response) 
   });
 
   const result = await Task.findById(newTask._id)
-  .populate("assignee", "name email avatar")
-  .populate("createdBy", "name email avatar")
-  .lean();
+    .populate("assignee", "name email avatar")
+    .populate("createdBy", "name email avatar")
+    .lean();
 
-const io = req.app.get("io");
-emitToWorkspace(io, validatedData.workspaceId, "TASK_CREATED", result);
-
-  res.status(201).json({ success: true, data: result });
+  const workspaceIdString = validatedData.workspaceId.toString();
+  const io = req.app.get("io");
+  
+  emitToWorkspace(io, workspaceIdString, "TASK_CREATED", result);
+  if (result.assignee) {
+    const assigneeId = result.assignee._id.toString();
+    io.to(assigneeId).emit("TASK_CREATED", result);
+ }
+  res.status(201).json({
+    success: true,
+    data: result
+  });
 });
 
 
@@ -104,32 +111,20 @@ export const deleteGroupTask = asyncHandler(async (req: Request, res: Response) 
   const { taskId } = req.params;
   const userId = (req.user as any)._id; 
 
- 
   const task = await Task.findById(taskId).populate("workspace");
+  if (!task) return res.status(404).json({ success: false, message: "Task not found" });
 
-  if (!task) {
-    return res.status(404).json({ success: false, message: "Task not found" });
-  }
-
- 
-  const workspace = task.workspace as any;
-  const isOwner = workspace.owner.toString() === userId.toString();
-  const isCreator = task.createdBy.toString() === userId.toString();
-
- 
-  if (!isOwner && !isCreator) {
-    return res.status(403).json({ 
-      success: false, 
-      message: "Security Alert: You are not authorized to delete this task" 
-    });
-  }
+  const workspaceObj = task.workspace as any;
+  const workspaceId = workspaceObj._id.toString();
 
   await task.deleteOne();
 
-  const workspaceObj = task.workspace as any; 
   const io = req.app.get("io");
-  emitToWorkspace(io, workspaceObj._id.toString(), "TASK_DELETED", { taskId });
+  emitToWorkspace(io, workspaceId, "TASK_DELETED", { taskId });
 
+  if (task.assignee) {
+    io.to(task.assignee.toString()).emit("TASK_DELETED", { taskId, title: task.title });
+  }
   res.status(200).json({ success: true, message: "Deleted" });
 });
 
@@ -185,6 +180,9 @@ export const updateGroupTask = asyncHandler(async (req: Request, res: Response) 
 
   const io = req.app.get("io");
   emitToWorkspace(io, task.workspace._id.toString(), "TASK_UPDATED", updatedTask);
-
+  
+  if (updatedTask.assignee) {
+    io.to(updatedTask.assignee._id.toString()).emit("TASK_UPDATED", updatedTask);
+  }
   res.status(200).json({ success: true, data: updatedTask });
 });
