@@ -4,6 +4,7 @@ export enum WorkspaceRole {
   ADMIN = "admin",
   EDITOR = "editor",
   VIEWER = "viewer",
+  MEMBER = 'member'
 }
 
 export interface IWorkspace extends Document {

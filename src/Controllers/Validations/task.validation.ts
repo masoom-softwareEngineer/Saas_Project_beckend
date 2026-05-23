@@ -22,7 +22,7 @@ export const createTaskSchema = z.object({
 export const GroupSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters").max(100),
   description: z.string().max(500).optional(),
-  workspaceId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Workspace ID"),
+  workspaceId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Workspace ID").optional(),
   assigneeId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Assignee ID"),
   priority: z.enum(["low", "medium", "high"]).default("medium"),
   dueDate: z.string().optional().refine((val) => !val || !isNaN(Date.parse(val)), {

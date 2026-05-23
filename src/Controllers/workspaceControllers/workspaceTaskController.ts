@@ -8,46 +8,43 @@ import { GroupSchema } from "../Validations/task.validation";
 import { Request, Response } from "express";
 
 /**
- * @desc    Create a new task with strict validation, socket & DB Notification
+ * @desc    Create a new task with dynamic workspace member rights, socket & DB Notification
  * @route   POST /api/v1/workspace/create-task
- * @access  Protected (Admin/Owner via checkPermission)
+ * @access  Protected (Owner/Admin/Member via checkPermission)
  */
 export const createGroupTask = asyncHandler(async (req: Request, res: Response) => {
- 
   const validatedData = GroupSchema.parse(req.body);
   const creatorId = (req.user as any)._id;
+  
+  // 🚀 یو آر ایل پیرامیٹر سے ورک اسپیس آئی ڈی پکڑیں
+  const { workspaceId } = req.params; 
 
- 
-
- 
   const newTask = await Task.create({
     title: validatedData.title,
     description: validatedData.description,
     priority: validatedData.priority,
     dueDate: validatedData.dueDate,
-    workspace: validatedData.workspaceId,
+    workspace: workspaceId, // 🚀 یہاں پیرامیٹر والی آئی ڈی پاس کریں
     assignee: validatedData.assigneeId, 
-    createdBy: creatorId,               
+    createdBy: creatorId,             
     user: creatorId,                    
   });
 
- 
   const result = await Task.findById(newTask._id)
     .populate("assignee", "name email avatar")
     .populate("createdBy", "name email avatar")
     .lean();
 
- 
   const io = req.app.get("io");
-  const workspaceIdString = validatedData.workspaceId.toString();
+  // 🚀 اسٹرنگ کنورٹ کرنے کا کلین طریقہ
+  const workspaceIdString = workspaceId.toString(); 
   
   emitToWorkspace(io, workspaceIdString, "TASK_CREATED", result);
 
-
-  if (result.assignee && result.assignee._id.toString() !== creatorId.toString()) {
+  if (result && result.assignee && result.assignee._id.toString() !== creatorId.toString()) {
     await createNotification(io, {
-      recipient: result.assignee._id.toString(),
-      sender: creatorId,
+      recipient: result.assignee._id.toString(), 
+      sender: creatorId,                         
       type: NotificationType.TASK_ASSIGNED,
       title: "New Task Assigned",
       message: `${(req.user as any).name} assigned you a new task: ${result.title}`,
@@ -55,7 +52,6 @@ export const createGroupTask = asyncHandler(async (req: Request, res: Response) 
     });
   }
 
- 
   res.status(201).json({ success: true, data: result });
 });
 
@@ -115,31 +111,39 @@ export const getGroupAllTasks = asyncHandler(async (req: Request, res: Response)
 });
 
 /**
- * @desc    Delete a task with cleanup, socket & notification (Strict Permission)
+ * @desc    Delete a task with cleanup, socket & notification (Dynamic Ownership Check)
  * @route   DELETE /api/v1/workspace/:workspaceId/tasks/:taskId
- * @access  Protected (Admin/Owner via workspaceAuth)
+ * @access  Protected (Owner/Admin or Task Creator)
  */
 export const deleteGroupTask = asyncHandler(async (req: Request, res: Response) => {
   const { taskId } = req.params;
   const userId = (req.user as any)._id.toString(); 
+  const userRole = (req as any).userRole; // Retreived from workspaceAuth middleware
 
- 
   const task = await Task.findById(taskId);
   if (!task) {
     res.status(404);
     throw new Error("Task not found");
   }
 
+ 
+  const isWorkspaceManager = userRole === "owner" || userRole === "admin";
+  const isTaskCreator = task.createdBy && task.createdBy.toString() === userId;
+
+  if (!isWorkspaceManager && !isTaskCreator) {
+    res.status(403);
+    throw new Error("Access Denied: You can only delete tasks created by yourself");
+  }
+
   const workspaceId = task.workspace.toString();
   const taskTitle = task.title;
   const assigneeId = task.assignee?.toString();
 
- 
   await task.deleteOne();
+  
   const io = req.app.get("io");
   emitToWorkspace(io, workspaceId, "TASK_DELETED", { taskId });
 
- 
   if (assigneeId && assigneeId !== userId) {
     await createNotification(io, {
       recipient: assigneeId,
@@ -155,7 +159,7 @@ export const deleteGroupTask = asyncHandler(async (req: Request, res: Response) 
 });
 
 /**
- * @desc    Update task with RBAC and smart notification
+ * @desc    Update task with RBAC, ownership alignment, socket & smart notification
  * @route   PATCH /api/v1/workspace/:workspaceId/tasks/:taskId
  * @access  Protected (Dynamic Role Validation via workspaceAuth)
  */
@@ -163,7 +167,7 @@ export const updateGroupTask = asyncHandler(async (req: Request, res: Response) 
   const { taskId } = req.params;
   const updates = req.body; 
   const userId = (req.user as any)._id.toString();
-  const userRole = req.userRole; 
+  const userRole = (req as any).userRole; 
 
   const task = await Task.findById(taskId);
   if (!task) {
@@ -171,10 +175,9 @@ export const updateGroupTask = asyncHandler(async (req: Request, res: Response) 
     throw new Error("Task not found");
   }
 
-  const isCreator = task.createdBy.toString() === userId;
-  const isAssignee = task.assignee?.toString() === userId; 
+  const isCreator = task.createdBy && task.createdBy.toString() === userId;
+  const isAssignee = task.assignee && task.assignee.toString() === userId; 
 
- 
   if (userRole !== "admin" && userRole !== "owner") {
     if (isCreator || isAssignee) {
       const allowedFields = ["status"];
@@ -196,21 +199,25 @@ export const updateGroupTask = asyncHandler(async (req: Request, res: Response) 
     taskId,
     { $set: updates },
     { new: true, runValidators: true }
-  ).populate("assignee", "name avatar");
+  )
+  .populate("assignee", "name email avatar")
+  .populate("createdBy", "name email avatar");
+
   const io = req.app.get("io");
   const workspaceId = task.workspace.toString();
   
   emitToWorkspace(io, workspaceId, "TASK_UPDATED", updatedTask);
 
-  if (updatedTask.assignee && updatedTask.assignee._id.toString() !== userId) {
+  if (updatedTask && updatedTask.assignee && updatedTask.assignee._id.toString() !== userId) {
     await createNotification(io, {
       recipient: updatedTask.assignee._id.toString(),
       sender: userId,
       type: NotificationType.TASK_UPDATED,
       title: "Task Update",
-      message: `The status of task "${updatedTask.title}" has been updated.`,
+      message: `The status of task "${updatedTask.title}" has been updated by ${(req.user as any).name}.`,
       relatedId: updatedTask._id
     });
   }
+
   res.status(200).json({ success: true, data: updatedTask });
 });
