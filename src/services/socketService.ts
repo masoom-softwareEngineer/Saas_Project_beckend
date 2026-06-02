@@ -37,7 +37,10 @@ export const setupSocketHandlers = (io: Server) => {
     const userId = (socket as any).user?.id;
     console.log(`⚡ Verified User Connected: ${userId} (Socket ID: ${socket.id})`);
 
-   
+    if (userId) {
+      socket.join(userId.toString());
+      console.log(`🔒 User joined their personal notification room: ${userId}`);
+    }
     socket.on("join_workspace", (workspaceId: string) => {
       socket.join(workspaceId);
       console.log(`👥 User ${userId} joined room: ${workspaceId}`);
