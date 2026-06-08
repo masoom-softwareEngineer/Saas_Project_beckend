@@ -87,7 +87,14 @@ export const getAllTasks = asyncHandler(async (req: Request, res: Response) => {
  */
 export const updateTask = asyncHandler(async (req: Request, res: Response) => {
   const { id } = req.params;
-  const userId = (req as any).user._id;
+  
+  const rawUserId = (req as any).user?._id || (req as any).user?.id;
+  const userId = rawUserId ? rawUserId.toString() : null;
+
+  if (!userId) {
+    res.status(401);
+    throw new Error("User authentication context missing");
+  }
 
   let task = await Task.findById(id);
 
@@ -95,8 +102,9 @@ export const updateTask = asyncHandler(async (req: Request, res: Response) => {
     res.status(404);
     throw new Error("Task not found");
   }
-const taskOwnerId = task.user?.toString() || task.createdBy?.toString()
-  if (!taskOwnerId  || taskOwnerId !== userId.toString()) {
+
+  const taskOwnerId = task.user?.toString() || task.createdBy?.toString();
+  if (!taskOwnerId || taskOwnerId !== userId) {
     res.status(401);
     throw new Error("User not authorized to update this task");
   }

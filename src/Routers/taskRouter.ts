@@ -19,7 +19,7 @@ TaskRouter.post(
   createTask                 
 );
 TaskRouter.get("/", protect, getAllTasks);
-TaskRouter.route("/update/:id").patch(protect, updateTask);
+TaskRouter.route("/:id").patch(protect, updateTask);
 TaskRouter.route("/delete/:id").delete(protect, deleteTask);
 
 TaskRouter.delete(
