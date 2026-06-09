@@ -127,3 +127,59 @@ EMAIL=qudratullah_verified_sender@yourdomain.com
 ### ==============================================================================
 MAILTRAP_USER=your_secure_sandbox_mailtrap_user_identifier
 MAILTRAP_PASS=your_secure_sandbox_mailtrap_credential_password
+
+---
+
+## 🔐 Module 2: Authentication & Advanced Security Infrastructure
+
+TaskFlow enforces an enterprise-grade AAA (Authentication, Authorization, and Accounting) subsystem. The core ecosystem completely eliminates standard local storage vulnerabilities (such as XSS token theft and session hijacking) by migrating all session lifecycles into strict backend management boundaries and highly secure token-rotation mechanics.
+
+### 🛡️ System Security Architecture & Mitigation Protocols
+* **Cryptographic Token Isolation:** Implements split JSON Web Token (JWT) topologies utilizing low-latency **Access Tokens (15-minute lifecycle)** for continuous route authentication and high-entropy **Refresh Tokens (7-day lifecycle)** for continuous session rotation.
+* **Hardened Cookie Transport Layer:** All generated tokens are delivered explicitly via server-side `Set-Cookie` directives configured with strict mitigation flags: `HttpOnly` (blocking JavaScript access), `Secure` (production-enforced SSL), and `SameSite=Lax` (preventing CSRF execution attacks).
+* **Distributed Brute-Force Shielding:** Protects the authentication layer through rate-limiting middleware matrices, dynamically throttling continuous malicious authorization attempts per unique IP block.
+
+---
+
+### 📥 Multi-Tenant User Registration (`POST /api/v1/auth/signup`)
+
+Registers a new user profile inside the database cluster, initializes default entity metadata, and dispatches a verification payload signature.
+
+#### Architectural Response Snapshot:
+![Signup Success Response](docs/signup.png)
+
+---
+
+### 🔑 Secure Session Initialization (`POST /api/v1/auth/login`)
+
+Validates client credentials, hashes incoming structures against stored cryptographic records, signs high-entropy payloads, and injects stateful HTTP-Only tokens into the user environment.
+
+#### Architectural Response Snapshot:
+![Login Success Response](docs/Login.png)
+
+---
+
+### 🌐 Google OAuth 2.0 Integration (`GET /api/v1/auth/google`)
+
+Handles seamless identity federation via Google’s Identity Provider (IdP), enabling high-performance, single-click account creation and secure session provisioning without traditional password dependencies.
+
+#### Architectural Response Snapshot:
+![Google Auth Success Response](docs/google-auth-success.png)
+
+---
+
+### 🔄 Account Recovery & Self-Service Core (`POST /api/v1/auth/forgot-password`)
+
+Generates a secure, short-lived, single-use cryptographic token bound to the requested user identity and triggers an automated password recovery routing pipeline.
+
+#### Architectural Response Snapshot:
+![Forgot Password Success Response](docs/forgot-password.png)
+
+---
+
+### ⚠️ Important Architecture & Deployment Note
+
+> [!WARNING]
+> **Transactional Mail Sandbox Constraints:** TaskFlow utilizes the **Resend Mail Engine Free Tier Architecture** for programmatic email dispatches. Due to strict domain sandboxing policy constraints within development accounts, custom verification codes and recovery links cannot be delivered to unverified public external evaluation addresses.
+> 
+> **Recommended Testing Vector:** To bypass transactional email boundaries during system evaluation, all external testing personnel, security reviewers, and engineering hiring managers are strictly advised to initialize active sessions via the **Google OAuth 2.0 Integration**. This mechanism guarantees instant, successful authentication securely with zero dependency on local mail-delivery channels.
