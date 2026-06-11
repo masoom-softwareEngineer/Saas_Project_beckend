@@ -241,3 +241,79 @@ Updates specific task metadata schemas or lifecycle phases inside the persistent
 
 #### Architectural Response Snapshot:
 ![Update Task Success Response](docs/update-task.png)
+
+---
+
+## 🌐 Module 5: Global API Endpoint Reference & Custom Middleware Topology
+
+TaskFlow exposes a highly secure, modular, and optimized RESTful API interface. Every incoming HTTP request undergoes deep packet and state validation through a pipeline of decoupled middlewares before reaching the core database controllers.
+
+### 🛡️ Enterprise Middleware Execution Order
+
+Whenever a client triggers an endpoint, the payload travels through a deterministic security middleware stack:
+
+1. **`signupLimit` / `loginLimit`:** Rate-limiting layer powered by an in-memory sliding window to shield endpoints from brute-force or DDoS vectors.
+2. **`protect`:** Cryptographic authentication layer validating the presence and signature of bearer state tokens / secure HttpOnly cookies (`SaasAccessToken`).
+3. **`validate(schema)`:** Strict runtime request payload validation using strongly-typed Zod/Joi schemas before execution blocks.
+4. **`checkPermission(perm)`:** Granular Role-Based Access Control (RBAC) evaluator verifying tenant membership rights against requested resource scopes.
+
+---
+
+### 📊 Comprehensive API Blueprint Matrix
+
+#### 🔐 1. Authentication & Profile Core (`/api/v1/auth`)
+
+| Method | Endpoint | Middleware / Security Layer | Operational Intent & Scope |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/signup` | `signupLimit` | Registers high-fidelity corporate profiles into the cluster. |
+| **POST** | `/verify` | `signupLimit` | Finalizes state authentication via out-of-band validation. |
+| **POST** | `/login` | `loginLimit` | Issues cryptographically signed state-bound sessions. |
+| **POST** | `/forgot-password` | `signupLimit` | Enqueues secure tokens for asymmetric password recovery. |
+| **PATCH** | `/reset-password/:token`| None | Mutates credentials using authenticated single-use tokens. |
+| **GET** | `/me` | `protect` | Hydrates active user profiles onto front-end environments. |
+| **PATCH** | `/update-me` | `protect` | Patches safe non-critical profile state variables. |
+| **PATCH** | `/update-avatar` | `protect`, `upload.single()` | Streams binary multi-part profile avatars to object storage. |
+| **POST** | `/change-password` | `protect` | Updates secure credential hashes inside live sessions. |
+
+#### 🌐 2. Federated OAuth Engine (`/api/v1/auth`)
+
+| Method | Endpoint | Middleware Layer | Operational Intent & Scope |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/google` | None | Triggers Google Identity open federation handshake redirection. |
+| **GET** | `/google/callback` | `googleCallback` | Intercepts third-party tokens and generates local session states. |
+| **GET** | `/refresh-token` | None | Rotates expiring access vectors using secure refresh keys. |
+| **POST** | `/logout` | None | Invalidates distributed server cache states and clears cookies. |
+
+#### 🏢 3. Workspace Hub & Multi-Tenancy (`/api/v1/workspace`)
+
+| Method | Endpoint | Middleware Layer | Operational Intent & Scope |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/create-workspaces` | `protect` | Provisions cryptographically isolated workspace clusters. |
+| **GET** | `/workspaces` | `protect` | Fetches multi-tenant workspaces associated with active tokens. |
+| **GET** | `/single/:workspaceId` | `protect`, `checkPermission` | Retargets isolated tenant metrics for authorized eyes. |
+| **POST** | `/:workspaceId/create-task`| `protect`, `checkPermission` | Injects group tasks scoped directly inside active tenants. |
+| **GET** | `/get-group-task/:workspaceId`| `protect`, `checkPermission`| Streams tasks bound to specified workspace scopes. |
+| **DELETE**| `/:workspaceId/tasks/:taskId`| `protect`, `checkPermission`| Hard deletes group-level assets via role constraints. |
+| **PATCH** | `/:workspaceId/tasks/:taskId`| `protect`, `checkPermission`| Atomically mutates task lifecycle and metadata variables. |
+
+#### 📝 4. Unified Task Lifecycle (`/api/v1/tasks`)
+
+| Method | Endpoint | Middleware Layer | Operational Intent & Scope |
+| :--- | :--- | :--- | :--- |
+| **POST** | `/createtask` | `protect`, `validate` | Validates schemas and maps single task objects directly. |
+| **GET** | `/` | `protect` | Extracts isolated queries of assigned target lifecycles. |
+| **PATCH** | `/:id` | `protect` | Performs partial updates on singular entity schemas. |
+| **DELETE**| `/delete/:id` | `protect` | Permanently drops a target task entity from the schema. |
+| **DELETE**| `/remove-member` | `protect`, `checkPermission`| Expels member associations and strips role states. |
+| **POST** | `/add-member` | `protect`, `checkPermission`| Maps external profiles onto target workspace boundaries. |
+| **PATCH** | `/update-role` | `protect`, `checkPermission`| Elevates or demotes administrative ranks within tenants. |
+| **DELETE**| `/leave-workspace` | `protect` | Voluntarily detaches active user profiles from a group. |
+| **GET** | `/member-profile/:userId` | `protect` | Returns localized metadata regarding workspace assets. |
+
+#### 🔔 5. Real-Time Notifications Hub (`/api/v1/notifications`)
+
+| Method | Endpoint | Middleware Layer | Operational Intent & Scope |
+| :--- | :--- | :--- | :--- |
+| **GET** | `/get-notification` | `protect` | Fetches incoming stream records destined for active users. |
+| **PATCH** | `/mark-all-read` | `protect` | Bulk-flushes unread state triggers to complete clusters. |
+| **PATCH** | `/:id/read` | `protect` | Explicitly transitions single notifications into a read state. |
