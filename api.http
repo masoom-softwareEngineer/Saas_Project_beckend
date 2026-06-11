@@ -1,8 +1,8 @@
-POST http://localhost:8000/api/v1/auth/signup
+POST http://localhost:8000/api/v1/tasks/add-member
 Content-Type: application/json
 
 {
-    "name": "KhanZad",
-    "email": "KhanZad86@gmail.com",
-    "password": "KhanZad1234@"
+    "workspaceId": "6a2a3616622d41367617d590",
+    "userEmail": "websiter86@gmail.com",
+    "role": "member"
 }

@@ -183,3 +183,32 @@ Generates a secure, short-lived, single-use cryptographic token bound to the req
 > **Transactional Mail Sandbox Constraints:** TaskFlow utilizes the **Resend Mail Engine Free Tier Architecture** for programmatic email dispatches. Due to strict domain sandboxing policy constraints within development accounts, custom verification codes and recovery links cannot be delivered to unverified public external evaluation addresses.
 > 
 > **Recommended Testing Vector:** To bypass transactional email boundaries during system evaluation, all external testing personnel, security reviewers, and engineering hiring managers are strictly advised to initialize active sessions via the **Google OAuth 2.0 Integration**. This mechanism guarantees instant, successful authentication securely with zero dependency on local mail-delivery channels.
+
+---
+
+## 🏢 Module 3: Workspace & Multi-Tenant Team Architecture
+
+TaskFlow features a true multi-tenant architectural footprint designed to mimic corporate organizational layouts. Operations and assets within the ecosystem are strictly non-monolithic; instead, they are compartmentalized across cryptographically isolated workspaces, preventing cross-tenant data leaks and enforcement of maximum logical boundaries.
+
+### 👥 Granular Access Control & Logical Boundaries
+* **Cryptographic Data Isolation:** Enforced via a custom-built contextual routing engine. The system guarantees that data streams, pipeline queries, and organizational mutations are rigidly confined to the active tenant environment.
+* **Role-Based Access Control (RBAC):** Integrates precise privilege tiers (`Admin`, `Member`, `Viewer`) embedded directly within the metadata schema of individual tenant groups, allowing granular permission hierarchies.
+* **Intelligent Middlewares Protection:** Every single incoming payload hitting a workspace or task entity must pass a strict custom authentication layer that intercept and verify tenant ownership records before granting execution bounds.
+
+---
+
+### 🛠️ Strategic Tenant Provisioning (`POST /api/v1/workspace/create`)
+
+Initializes a high-performance workspace cluster within the database entity layer, designating the operational creator as the primary cryptographic tenant owner (`Admin`).
+
+#### Architectural Response Snapshot:
+![Create Workspace Success Response](docs/create-workspace.png)
+
+---
+
+### ➕ Dynamic Team Expansion & Invitation (`POST /api/v1/tasks/add-member`)
+
+Injects federated corporate profiles into designated workspace groups with real-time assignment of system roles, mapping newly provisioned user spaces onto identical cryptographic tenant constraints.
+
+#### Architectural Response Snapshot:
+![Add Member Success Response](docs/add-member.png)
