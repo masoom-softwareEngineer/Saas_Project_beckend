@@ -212,3 +212,32 @@ Injects federated corporate profiles into designated workspace groups with real-
 
 #### Architectural Response Snapshot:
 ![Add Member Success Response](docs/add-member.png)
+
+---
+
+## ⚡ Module 4: Task Lifecycle & Real-Time Stateful Engine
+
+TaskFlow integrates a high-performance event-driven architecture powered by **Socket.io** to manage task lifecycles seamlessly. Instead of relying on expensive, high-overhead HTTP polling protocols, the core task matrix runs on a stateful duplex bi-directional communication layer that guarantees instantaneous global updates across active collaborative teams.
+
+### 🔄 Real-Time Synchronization & Pipeline Triggers
+* **Stateful Event Broadcasting:** Any data mutation on a task asset immediately invokes the server-side streaming engine, broadcasting specific state signals (e.g., `task:created`, `task:updated`) to all subscribed socket client tunnels within that exact workspace perimeter.
+* **Deterministic Status Workflows:** Enforces strict validation layers over state transitions inside the data layer schema, tracking tasks deterministically across structured execution blocks (`todo` ➔ `in-progress` ➔ `done`).
+* **Optimized Payload Footprints:** Socket messages transport minimal delta changes instead of reloading the entire workspace object hierarchy, preserving client network bandwidth and cutting down memory consumption.
+
+---
+
+### 📝 Strategic Task Injection (`POST /api/v1/tasks/createtask`)
+
+Allocates and registers a granular workspace asset within the cluster database layer, mapping its operational scope onto specific tenant user identifiers.
+
+#### Architectural Response Snapshot:
+![Create Task Success Response](docs/task-create.png)
+
+---
+
+### 📈 Real-Time State Mutation & Transitions (`PATCH /api/v1/tasks/:id`)
+
+Updates specific task metadata schemas or lifecycle phases inside the persistent storage layer, dynamically targeting the changes and triggering atomic socket broadcast signals to active workspace handlers.
+
+#### Architectural Response Snapshot:
+![Update Task Success Response](docs/update-task.png)
