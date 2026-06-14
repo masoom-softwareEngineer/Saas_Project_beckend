@@ -56,15 +56,17 @@ app.use(errorHandler);
 
 setupSocketHandlers(io)
 
-const server = httpServer.listen(PORT, () => {
+if (process.env.NODE_ENV !== "production") {
+    httpServer.listen(PORT, () => {
+        DB();
+        console.log(`✅ Server & Socket running on port ${PORT}`);
+    });
+} else {
     DB();
-    console.log(`✅ Server & Socket running on port ${PORT}`);
-});
-
-// Global Handlers
+}
 process.on("unhandledRejection", (err: any) => {
     console.log("UNHANDLED REJECTION! Shutting down...");
-    server.close(() => process.exit(1));
+    process.exit(1);
 });
-
 export { io };
+export default app;
