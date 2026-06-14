@@ -1,29 +1,54 @@
 import mongoose from 'mongoose';
 
-// کنکشن کی حالت کو ٹریک کرنے کے لیے ایک ویریبل
-let isConnected = false;
+const MONGO_URL = process.env.MONGO_URL;
 
-export const DB = async () => {
-    // اگر پہلے سے کنیکٹڈ ہے تو دوبارہ کنیکٹ کرنے کی ضرورت نہیں
-    if (isConnected) {
-        console.log("Using existing mongodb connection");
-        return;
-    }
+if (!MONGO_URL) {
+  throw new Error("Please define the MONGO_URL environment variable inside .env");
+}
 
-    try {
-        if (!process.env.MONGO_URL) {
-            throw new Error('MONGO_URL is not defined in environment variables');
-        }
+// ۱۔ پہلے ایرر کا حل: global کی ٹائپ سیٹ کرنا تاکہ ٹائپ سکرپٹ اعتراض نہ کرے
+interface GlobalMongoose {
+  mongoose: {
+    conn: typeof mongoose | null;
+    promise: Promise<typeof mongoose> | null;
+  } | undefined;
+}
 
-        // ورسل سرور لیس کے لیے بہترین کنکشن آپشنز
-        await mongoose.connect(process.env.MONGO_URL, {
-            serverSelectionTimeoutMS: 5000, // ۵ سیکنڈ میں کنیکٹ نہ ہو تو ایرر دے
-        });
+const globalWithMongoose = global as unknown as GlobalMongoose;
 
-        isConnected = true;
-        console.log("✅ mongodb is successfully connected");
-    } catch (err) {
-        console.log('❌ Mongodb is not Connected:', err);
-        throw err; // ایرر کو آگے بھیجیں تاکہ ورسل کو پتہ چلے
-    }
-};
+let cached = globalWithMongoose.mongoose;
+
+if (!cached) {
+  cached = globalWithMongoose.mongoose = { conn: null, promise: null };
+}
+
+async function dbConnect() {
+  if (cached!.conn) {
+    return cached!.conn;
+  }
+
+  if (!cached!.promise) {
+    const opts = {
+      bufferCommands: false,
+      serverSelectionTimeoutMS: 15000,
+    };
+
+    // ۲۔ دوسرے ایرر کا حل: MONGO_URL کے آگے as string لگا کر ٹائپ پکی کر دی
+    cached!.promise = mongoose.connect(MONGO_URL as string, opts).then((mongooseInstance) => {
+      console.log("✅ MongoDB Connected Successfully to Vercel!");
+      return mongooseInstance;
+    });
+  }
+
+  try {
+    cached!.conn = await cached!.promise;
+  } catch (e) {
+    cached!.promise = null;
+    console.error("❌ MongoDB Connection Error:", e);
+    throw e;
+  }
+
+  return cached!.conn;
+}
+
+export default dbConnect;

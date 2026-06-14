@@ -6,7 +6,7 @@ dotenv.config();
 import cors from "cors";
 import helmet from "helmet";
 import signupRoute from "./Routers/authRouter";
-import { DB } from "./Config/db";
+import DB from "./Config/db";
 import { notFound, errorHandler } from "./MiddleWare/errorMiddleware";
 import cookieParser from 'cookie-parser'
 import googleRouter from "./Routers/gooGleAuthRouter";
