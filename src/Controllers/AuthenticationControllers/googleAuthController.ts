@@ -8,7 +8,7 @@ import asyncHandler from 'express-async-handler'
 passport.use(new GoogleStrategy({
     clientID: process.env.GOOGLE_CLIENT_ID as string,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
-    callbackURL: "http://localhost:8000/api/v1/auth/google/callback"
+    callbackURL: "https://saas-project-beckend.vercel.app/api/v1/auth/google/callback"
   },
   (accessToken, refreshToken, profile, done) => {
     return done(null, profile);
@@ -19,8 +19,9 @@ export const googleLogin = passport.authenticate('google', {
     scope: ['profile', 'email'] 
 });
 
+// 1. یہاں اپنے فرنٹ اینڈ کا لنک ڈالیں (اگر فرنٹ اینڈ لوکل ہوسٹ پر ہے تو وہ لنک دیں)
 export const googleCallback = passport.authenticate('google', { 
-    failureRedirect: '/login',
+    failureRedirect: `${process.env.CLIENT_URL}/login`,
     session: false 
 });
 
@@ -39,5 +40,10 @@ export const loginSuccess = asyncHandler(async (req: Request, res: Response) => 
             role: "user"
         });
     }
-    sendToken(user, 200, res, true);
+    
+    // ٹوکن کوکیز میں سیٹ ہوگا
+    sendToken(user, 200, res, false); 
+
+    // 2. ٹوکن بھیجنے کے بعد یوزر کو واپس فرنٹ اینڈ کے ڈیش بورڈ پر بھیجیں
+    res.redirect(`${process.env.CLIENT_URL}/dashboard`); 
 });
