@@ -43,6 +43,9 @@ export const createGroupTask = asyncHandler(async (req: Request, res: Response) 
     .lean();
 
   const io = req.app.get("io");
+  if (!validatedData.workspaceId) {
+    return res.status(400).json({ message: "Workspace ID is required" });
+  }
   const workspaceIdString = validatedData.workspaceId.toString();
   
   emitToWorkspace(io, workspaceIdString, "TASK_CREATED", result);
