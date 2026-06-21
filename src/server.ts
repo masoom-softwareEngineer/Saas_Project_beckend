@@ -68,8 +68,8 @@ const startServer = async () => {
 
 startServer();
 process.on("unhandledRejection", (err: any) => {
-    console.log("UNHANDLED REJECTION! Shutting down...");
-    process.exit(1);
+    console.log("UNHANDLED REJECTION! Shutting down...",err);
+    
 });
 export { io };
 export default app;
