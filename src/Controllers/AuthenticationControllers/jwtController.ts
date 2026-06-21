@@ -19,15 +19,15 @@ export const sendToken = async (user: any, statusCode: number, res: Response, is
         expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         httpOnly: true, 
         path: '/',
-        secure: false,   
-        sameSite: "lax" as const, 
+        secure: true,   
+        sameSite: "none" as const, 
     };
 
     res.cookie("SaasAccessToken", SaasAccessToken, { ...cookieOptions, expires: new Date(Date.now() + 15 * 60 * 1000) });
     res.cookie("SaasRefreshToken", SaasRefreshToken, cookieOptions);
 
     if (isRedirect) {
-        return res.redirect("http://localhost:5173/dashboard");
+        return res.redirect(`${process.env.CLIENT_URL}/dashboard`);
     }
 
     res.status(statusCode).json({

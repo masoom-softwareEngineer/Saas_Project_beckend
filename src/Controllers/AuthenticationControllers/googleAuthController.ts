@@ -25,7 +25,7 @@ export const googleCallback = passport.authenticate('google', {
 });
 
 export const loginSuccess = asyncHandler(async (req: Request, res: Response) => {
-    await dbConnect()
+    await dbConnect();
     const googleuser = req.user as any;
     const email = googleuser.emails[0].value;
 
@@ -41,6 +41,5 @@ export const loginSuccess = asyncHandler(async (req: Request, res: Response) => 
         });
     }
     
-    sendToken(user, 200, res, false); 
-    res.redirect(`${process.env.CLIENT_URL}/dashboard`); 
+    sendToken(user, 200, res, true);  
 });
