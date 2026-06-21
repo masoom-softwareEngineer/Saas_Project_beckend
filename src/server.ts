@@ -56,14 +56,17 @@ app.use(errorHandler);
 
 setupSocketHandlers(io)
 
-if (process.env.NODE_ENV !== "production") {
-    httpServer.listen(PORT, () => {
-        DB();
-        console.log(`✅ Server & Socket running on port ${PORT}`);
-    });
-} else {
-    DB();
-}
+// یہ نیا کوڈ لگائیں
+const startServer = async () => {
+    await DB();
+    if (process.env.NODE_ENV !== "production") {
+        httpServer.listen(PORT, () => {
+            console.log(`✅ Server & Socket running on port ${PORT}`);
+        });
+    }
+};
+
+startServer();
 process.on("unhandledRejection", (err: any) => {
     console.log("UNHANDLED REJECTION! Shutting down...");
     process.exit(1);
